@@ -14,7 +14,7 @@ def user(db) -> User:
 
 @pytest.fixture
 def user_account(db, user) -> Account:
-    user_account = Account.objects.create(account_name='Account name')
+    user_account = Account.objects.create(account_name='Account name', owner=user)
     return user_account
 
 

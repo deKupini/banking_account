@@ -4,7 +4,7 @@ from rest_framework.status import HTTP_201_CREATED
 from account.models import Account
 
 
-ACCOUNT_URL = reverse('account')
+ACCOUNT_URL = reverse('account-list')
 
 
 def test_create_account_without_other_accounts(db, user, user_client):
