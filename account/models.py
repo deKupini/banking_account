@@ -27,12 +27,13 @@ class Account(models.Model):
 
 class AccountHistory(models.Model):
     TYPE = (
-        ('C', 'charge'),
-        ('I', 'income'),
+        ('I', 'incoming'),
+        ('O', 'outgoing'),
     )
 
     account = models.ForeignKey('Account', on_delete=models.CASCADE)
     amount = models.PositiveIntegerField()
+    balance_after_transfer = models.FloatField()
     description = models.CharField(blank=True, max_length=128, null=True)
     transaction_date = models.DateTimeField(auto_now=True)
     type = models.CharField(max_length=1, choices=TYPE)
