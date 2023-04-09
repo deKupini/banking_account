@@ -32,7 +32,7 @@ class AccountHistory(models.Model):
     )
 
     account = models.ForeignKey('Account', on_delete=models.CASCADE)
-    amount = models.PositiveIntegerField()
+    amount = models.FloatField()
     balance_after_transfer = models.FloatField()
     description = models.CharField(blank=True, max_length=128, null=True)
     transaction_date = models.DateTimeField(auto_now=True)
