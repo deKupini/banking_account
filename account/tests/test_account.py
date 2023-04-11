@@ -1,5 +1,6 @@
 from rest_framework.reverse import reverse
-from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST, HTTP_403_FORBIDDEN, HTTP_404_NOT_FOUND
+from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST, HTTP_403_FORBIDDEN, \
+    HTTP_404_NOT_FOUND, HTTP_200_OK
 
 from account.models import Account, AccountHistory
 
@@ -292,11 +293,61 @@ def test_outgoing_transfer_without_authorization(anonymous_client, db, user_acco
     assert AccountHistory.objects.count() == 1
 
 
-def test_outgoing_transfer_from_not_existing_account(anonymous_client, db):
+def test_outgoing_transfer_from_not_existing_account(db, user_client):
     url = reverse('account-transfer-from-account', args=[1])
     data = {'amount': 80.00, 'description': 'Transfer description'}
-    response = anonymous_client.patch(url, data, format='json')
+    response = user_client.patch(url, data, format='json')
 
-    assert response.status_code == HTTP_403_FORBIDDEN
+    assert response.status_code == HTTP_404_NOT_FOUND
     assert not AccountHistory.objects.count()
 
+
+def test_check_balance_without_authorization(anonymous_client, db, user_account):
+    url = reverse('account-check-balance', args=[user_account.id])
+    response = anonymous_client.get(url)
+
+    assert response.status_code == HTTP_403_FORBIDDEN
+
+
+def test_check_balance_as_not_owner(db, user_2_client, user_account):
+    url = reverse('account-check-balance', args=[user_account.id])
+    response = user_2_client.get(url)
+
+    assert response.status_code == HTTP_404_NOT_FOUND
+
+
+def test_check_zero_balance(db, user_account, user_client):
+    url = reverse('account-check-balance', args=[user_account.id])
+    response = user_client.get(url)
+
+    assert response.status_code == HTTP_200_OK
+    response = response.json()
+    assert response == {
+        'balance': user_account.balance
+    }
+
+
+def test_check_positive_balance(db, user_account, user_client):
+    user_account.balance = 100.00
+    user_account.save()
+    url = reverse('account-check-balance', args=[user_account.id])
+    response = user_client.get(url)
+
+    assert response.status_code == HTTP_200_OK
+    response = response.json()
+    assert response == {
+        'balance': user_account.balance
+    }
+
+
+def test_check_negative_balance(db, user_account, user_client):
+    user_account.balance = -100.00
+    user_account.save()
+    url = reverse('account-check-balance', args=[user_account.id])
+    response = user_client.get(url)
+
+    assert response.status_code == HTTP_200_OK
+    response = response.json()
+    assert response == {
+        'balance': user_account.balance
+    }
