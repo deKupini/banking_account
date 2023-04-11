@@ -10,7 +10,7 @@ from account.serializers import AccountSerializer
 
 
 class AccountViewSet(ModelViewSet):
-    http_method_names = ('patch', 'post')
+    http_method_names = ('get', 'patch', 'post')
     permission_classes = (IsAuthenticated,)
     queryset = Account.objects.all()
     serializer_class = AccountSerializer
@@ -50,3 +50,10 @@ class AccountViewSet(ModelViewSet):
             type='O'
         )
         return Response(status=HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['get'])
+    def check_balance(self, request, pk=None):
+        account = get_object_or_404(Account, id=pk)
+        if account.owner != request.user:
+            return Response(status=HTTP_404_NOT_FOUND)
+        return Response({'balance': account.balance})
