@@ -1,3 +1,6 @@
+from unittest.mock import patch
+import datetime
+
 from rest_framework.reverse import reverse
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST, HTTP_403_FORBIDDEN, \
     HTTP_404_NOT_FOUND, HTTP_200_OK
@@ -5,7 +8,6 @@ from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_40
 from account.models import Account, AccountHistory
 
 ACCOUNT_URL = reverse('account-list')
-
 
 def test_create_account_without_other_accounts(db, user, user_client):
     data = {
@@ -351,3 +353,117 @@ def test_check_negative_balance(db, user_account, user_client):
     assert response == {
         'balance': user_account.balance
     }
+
+
+def test_check_empty_account_history(db, user_account, user_client):
+    url = reverse('account-check-history', args=[user_account.id])
+    response = user_client.get(url)
+
+    assert response.status_code == HTTP_200_OK
+    response = response.json()
+    assert response['results'] == []
+
+
+def test_check_single_income_record_account_history(account_history_record_income, db, user_account, user_client):
+    url = reverse('account-check-history', args=[user_account.id])
+    response = user_client.get(url)
+
+    assert response.status_code == HTTP_200_OK
+    response = response.json()
+    assert response['results'] == [
+        {
+            'amount': account_history_record_income.amount,
+            'balance_after_transfer': account_history_record_income.balance_after_transfer,
+            'description': account_history_record_income.description,
+            'id': account_history_record_income.id,
+            'transaction_date': account_history_record_income.transaction_date.strftime('%Y-%m-%d %H:%M:%S'),
+            'type': account_history_record_income.type,
+        }
+    ]
+
+
+def test_check_single_expense_record_account_history(account_history_record_expense, db, user_account, user_client):
+    url = reverse('account-check-history', args=[user_account.id])
+    response = user_client.get(url)
+
+    assert response.status_code == HTTP_200_OK
+    response = response.json()
+    assert response['results'] == [
+        {
+            'amount': account_history_record_expense.amount,
+            'balance_after_transfer': account_history_record_expense.balance_after_transfer,
+            'description': account_history_record_expense.description,
+            'id': account_history_record_expense.id,
+            'transaction_date': account_history_record_expense.transaction_date.strftime('%Y-%m-%d %H:%M:%S'),
+            'type': account_history_record_expense.type,
+        }
+    ]
+
+
+def test_check_order_of_account_history(account_history_factory, db, user_account, user_client):
+    transaction_date = datetime.datetime(2023, 4, 5, 15, 0, 20)
+    with patch('django.utils.timezone.now', return_value=transaction_date):
+        transfer_1 = account_history_factory(amount=20.50)
+
+    transaction_date = datetime.datetime(2023, 4, 5, 14, 58, 1)
+    with patch('django.utils.timezone.now', return_value=transaction_date):
+        transfer_2 = account_history_factory(amount=30.45, transfer_type='O')
+
+    transaction_date = datetime.datetime(2023, 4, 5, 16, 4, 50)
+    with patch('django.utils.timezone.now', return_value=transaction_date):
+        transfer_3 = account_history_factory(amount=100.00)
+
+    transaction_date = datetime.datetime(2023, 4, 5, 15, 0, 14)
+    with patch('django.utils.timezone.now', return_value=transaction_date):
+        transfer_4 = account_history_factory(amount=12.01, transfer_type='O')
+
+    order: list[AccountHistory] = [transfer_3, transfer_1, transfer_4, transfer_2]
+
+    url = reverse('account-check-history', args=[user_account.id])
+    response = user_client.get(url)
+
+    assert response.status_code == HTTP_200_OK
+    response = response.json()
+    assert response['count'] == 4
+    for i in range(4):
+        assert response['results'][i]['id'] == order[i].id
+
+
+def test_check_excluding_account_history_from_another_accounts(
+        account_history_record_income,
+        db,
+        user_account,
+        user_account_2,
+        user_client,
+):
+    url = reverse('account-check-history', args=[user_account_2.id])
+    response = user_client.get(url)
+
+    assert response.status_code == HTTP_200_OK
+    assert not response.json()['count']
+
+
+def test_check_account_history_as_not_owner(
+        account_history_record_income,
+        db,
+        user_2_client,
+        user_account,
+):
+    url = reverse('account-check-history', args=[user_account.id])
+    response = user_2_client.get(url)
+
+    assert response.status_code == HTTP_404_NOT_FOUND
+
+
+def test_check_account_history_of_not_existing_account(db, user_client):
+    url = reverse('account-check-history', args=[1])
+    response = user_client.get(url)
+
+    assert response.status_code == HTTP_404_NOT_FOUND
+
+
+def test_check_account_history_without_authorization(anonymous_client, db, user_account):
+    url = reverse('account-check-history', args=[1])
+    response = anonymous_client.get(url)
+
+    assert response.status_code == HTTP_403_FORBIDDEN
