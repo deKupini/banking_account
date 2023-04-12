@@ -16,6 +16,15 @@ class AccountViewSet(ModelViewSet):
     queryset = Account.objects.all()
     serializer_class = AccountSerializer
 
+    def list(self, request, *args, **kwargs):
+        return Response(status=HTTP_404_NOT_FOUND)
+
+    def partial_update(self, request, *args, **kwargs):
+        return Response(status=HTTP_404_NOT_FOUND)
+
+    def retrieve(self, request, *args, **kwargs):
+        return Response(status=HTTP_404_NOT_FOUND)
+
     @action(detail=False, methods=['patch'])
     def transfer_to_account(self, request):
         account = get_object_or_404(Account, account_number=request.data['account_number'])

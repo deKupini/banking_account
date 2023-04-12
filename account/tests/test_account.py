@@ -9,6 +9,28 @@ from account.models import Account, AccountHistory
 
 ACCOUNT_URL = reverse('account-list')
 
+
+def test_block_get_account_list(db, user_account, user_client):
+    response = user_client.get(ACCOUNT_URL)
+
+    assert response.status_code == HTTP_404_NOT_FOUND
+
+
+def test_block_get_account(db, user_account, user_client):
+    response = user_client.get(ACCOUNT_URL + f'/{user_account.id}/')
+
+    assert response.status_code == HTTP_404_NOT_FOUND
+
+
+def test_block_patch_account(db, user_account, user_client):
+    data = {'account_name': 'New name'}
+    response = user_client.patch(ACCOUNT_URL + f'/{user_account.id}/', data)
+
+    assert response.status_code == HTTP_404_NOT_FOUND
+    user_account = Account.objects.get(id=user_account.id)
+    assert user_account.account_name != data['account_name']
+
+
 def test_create_account_without_other_accounts(db, user, user_client):
     data = {
         'account_name': 'Some name'
