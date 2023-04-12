@@ -2,8 +2,14 @@ from unittest.mock import patch
 import datetime
 
 from rest_framework.reverse import reverse
-from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST, HTTP_403_FORBIDDEN, \
-    HTTP_404_NOT_FOUND, HTTP_200_OK
+from rest_framework.status import (
+    HTTP_200_OK,
+    HTTP_201_CREATED,
+    HTTP_204_NO_CONTENT,
+    HTTP_400_BAD_REQUEST,
+    HTTP_401_UNAUTHORIZED,
+    HTTP_404_NOT_FOUND,
+)
 
 from account.models import Account, AccountHistory
 
@@ -129,7 +135,7 @@ def test_income_without_authorization(anonymous_client, db, user_account):
     data = {'account_number': user_account.account_number, 'amount': 20.54, 'description': 'Transfer description'}
     response = anonymous_client.patch(url, data, format='json')
 
-    assert response.status_code == HTTP_403_FORBIDDEN
+    assert response.status_code == HTTP_401_UNAUTHORIZED
     user_account_after_transaction_try = Account.objects.get(id=user_account.id)
     assert user_account_after_transaction_try == user_account
     assert not AccountHistory.objects.count()
@@ -311,7 +317,7 @@ def test_outgoing_transfer_without_authorization(anonymous_client, db, user_acco
     data = {'amount': 80.00, 'description': 'Transfer description'}
     response = anonymous_client.patch(url, data, format='json')
 
-    assert response.status_code == HTTP_403_FORBIDDEN
+    assert response.status_code == HTTP_401_UNAUTHORIZED
     user_account_after_transfer_try = Account.objects.get(id=user_account.id)
     assert user_account_after_transfer_try == user_account
     assert AccountHistory.objects.count() == 1
@@ -330,7 +336,7 @@ def test_check_balance_without_authorization(anonymous_client, db, user_account)
     url = reverse('account-check-balance', args=[user_account.id])
     response = anonymous_client.get(url)
 
-    assert response.status_code == HTTP_403_FORBIDDEN
+    assert response.status_code == HTTP_401_UNAUTHORIZED
 
 
 def test_check_balance_as_not_owner(db, user_2_client, user_account):
@@ -488,4 +494,4 @@ def test_check_account_history_without_authorization(anonymous_client, db, user_
     url = reverse('account-check-history', args=[1])
     response = anonymous_client.get(url)
 
-    assert response.status_code == HTTP_403_FORBIDDEN
+    assert response.status_code == HTTP_401_UNAUTHORIZED
