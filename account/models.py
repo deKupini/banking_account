@@ -8,7 +8,7 @@ class Account(models.Model):
     account_number = models.CharField(max_length=26, unique=True)
     account_name = models.CharField(max_length=64)
     balance = models.FloatField(default=0)
-    creation_date = models.DateField(auto_now=True)
+    creation_date = models.DateField(auto_now_add=True)
     owner = models.ForeignKey('auth.User', on_delete=models.CASCADE)
 
     @staticmethod
@@ -35,5 +35,5 @@ class AccountHistory(models.Model):
     amount = models.FloatField()
     balance_after_transfer = models.FloatField()
     description = models.CharField(blank=True, max_length=128, null=True)
-    transaction_date = models.DateTimeField(auto_now=True)
+    transaction_date = models.DateTimeField(auto_now_add=True)
     type = models.CharField(max_length=1, choices=TYPE)

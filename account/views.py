@@ -1,12 +1,13 @@
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 from rest_framework.viewsets import ModelViewSet
 
 from account.models import Account, AccountHistory
-from account.serializers import AccountSerializer
+from account.serializers import AccountSerializer, AccountHistorySerializer
 
 
 class AccountViewSet(ModelViewSet):
@@ -57,3 +58,16 @@ class AccountViewSet(ModelViewSet):
         if account.owner != request.user:
             return Response(status=HTTP_404_NOT_FOUND)
         return Response({'balance': account.balance})
+
+    @action(detail=True, methods=['get'])
+    def check_history(self, request, pk=None):
+        account = get_object_or_404(Account, id=pk)
+        if account.owner != request.user:
+            return Response(status=HTTP_404_NOT_FOUND)
+
+        paginator = PageNumberPagination()
+        account_history = AccountHistory.objects.filter(account=account).order_by('-transaction_date')
+        result_page = paginator.paginate_queryset(account_history, request)
+        serializer = AccountHistorySerializer(result_page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)

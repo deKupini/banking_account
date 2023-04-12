@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from account.models import Account
+from account.models import Account, AccountHistory
 
 
 class AccountSerializer(serializers.ModelSerializer):
@@ -16,3 +16,11 @@ class AccountSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         account = Account.objects.create(owner=self.context['request'].user, **validated_data)
         return account
+
+
+class AccountHistorySerializer(serializers.ModelSerializer):
+    transaction_date = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
+
+    class Meta:
+        model = AccountHistory
+        exclude = ('account',)
